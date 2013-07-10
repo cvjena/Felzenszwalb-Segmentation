@@ -23,7 +23,7 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
     return;
   }
   
-  if (nOutput > 1) {
+  if (nOutput > 2) {
     mexErrMsgTxt ( "Too many output arguments.");
     return;
   }
