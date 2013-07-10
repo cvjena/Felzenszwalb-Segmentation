@@ -88,17 +88,36 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
   
   /* Get sigma */  
   double sigma;
-  sigma = mxGetScalar( pInput[1] ); 
+  if ( nInput < 2) 
+  {
+    sigma = 0.5; 
+  }
+  else
+    sigma = mxGetScalar( pInput[1] ); 
   if ( verbose ) 
     mexPrintf("The sigma value is:  %f\n", sigma);
     
   /* Get k */  
-  int k = mxGetScalar( pInput[2] );
+  int k;
+  if ( nInput < 3) 
+  {
+    k = 500;
+  }
+  else
+    k = mxGetScalar( pInput[2] );
+  
   if ( verbose ) 
     mexPrintf("The k is:  %i\n", k);
    
   /* Get minSize*/  
-  int minSize = mxGetScalar(  pInput[3] );
+  int minSize;  
+  if ( nInput < 4)
+  {
+   minSize = 20;
+  }
+  else
+    minSize = mxGetScalar(  pInput[3] );
+  
   if ( verbose ) 
     mexPrintf("The minSize is:  %i\n", minSize);
    
