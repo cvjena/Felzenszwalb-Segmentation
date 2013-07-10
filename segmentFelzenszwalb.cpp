@@ -8,11 +8,11 @@
 #include "./pnmfile.h"
 #include "./image.h"
 #include "./segment-image.h"
+#include "./segment-image-labelOutput.h"
 
 void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
   int nInput, const mxArray *pInput[]) /* Input variables */
-{
-  mexPrintf("Let's run the segmentation program of Felzenszwalb and Huttenlocher :) !\n"); 
+{ 
     
    /* -----------------------------------------------------------------
    *                         Check the arguments
@@ -39,8 +39,15 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
    * -------------------------------------------------------------- */  
   
    bool verbose ( false );
-   if ( nInput >= 6)
-    verbose = mxGetLogicals( pInput[5] );
+   if ( nInput >= 7)
+   {
+    if ( mxIsLogicalScalar( pInput[6] ) && mxIsLogicalScalarTrue( pInput[6] ) )
+    {
+      verbose = true;
+    }
+    else
+      verbose = false; 
+   }
    
   /* Get string of input image*/  
   image<rgb> * imgInput;
@@ -121,14 +128,30 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
   if ( verbose ) 
     mexPrintf("The minSize is:  %i\n", minSize);
    
-
+  /* Get bool whether to compute the label img (int) or colored img (rgb)*/  
+  bool computeColorOutput;
+  if (nInput >=  5)
+  {
+    if ( mxIsLogicalScalar( pInput[4] ) && mxIsLogicalScalarTrue( pInput[4] ) )
+    {
+      computeColorOutput = true;
+    }
+    else
+      computeColorOutput = false;   
+  }
+  else
+  {
+    computeColorOutput = false;
+  }
+  if ( verbose ) 
+    mexPrintf("To we compute RGB colored segmentation result?  :  %i\n", computeColorOutput );
    
   /* Get string of output image if given*/  
   char * output;
-  if (nInput >=  5)
+  if (nInput >=  6)
   {
-    output = (char *) mxCalloc(mxGetN(pInput[4])+1, sizeof(char));
-    mxGetString(pInput[4], output, mxGetN(pInput[4])+1);
+    output = (char *) mxCalloc(mxGetN(pInput[5])+1, sizeof(char));
+    mxGetString(pInput[5], output, mxGetN(pInput[5])+1);
     
     if ( verbose ) 
       mexPrintf("The output string is:  %s\n", output);
@@ -136,16 +159,25 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
     
   if ( verbose )
     mexPrintf("image loaded, now start segmentation\n");  
+  
    
    /* -----------------------------------------------------------------
    *                       Do the main stuff 
    *                        >segmentation<
    * -------------------------------------------------------------- */   
    
+   
    int num_ccs; 
-   image<rgb> * imgResult = segment_image(imgInput, sigma, k, minSize, &num_ccs); 
+   image<rgb> * imgResultRGB = NULL;
+   image<int> * imgResult  = NULL;
+   
+   if ( computeColorOutput )
+     imgResultRGB = segment_image(imgInput, sigma, k, minSize, &num_ccs); 
+   else
+    imgResult = segment_image_labelOutput(imgInput, sigma, k, minSize, &num_ccs); 
+       
    if ( verbose )
-     mexPrintf("segmentation done\n");
+     mexPrintf("segmentation done\n");   
   
    
    /* -----------------------------------------------------------------
@@ -154,69 +186,100 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
    
    if ( nOutput == 0 )
    {
-     savePPM( imgResult, output );
+     if ( computeColorOutput )
+       savePPM( imgResultRGB, output );
+    else
+      save_image( imgResult, output );
      mexPrintf("save results\n"); 
    }
    else
    {
-     mexPrintf("convert to matlab structure and hand result back to main program\n"); 
-     /* convert segmentation result to matlax matrix*/
-     int width ( imgResult->width() );
-     int height (imgResult->height() );
-        
-     int numberOfPixels ( width * height * sizeof(rgb)  );
-     
      if ( verbose )
-       mexPrintf("The number of Pixel in your resulting image is:  %i -- summing over all color channels\n", numberOfPixels);
+       mexPrintf("convert to matlab structure and hand result back to main program\n"); 
      
-     /*if ( verbose )*/
-       mexPrintf(" width: %i, height: %i\n", width, height);
-     
-     /* keep in mind that matlab stores images  height × width × color, whereas C does it the other way round*/
-     int dims[] = {height, width,3};
-     pOutput[0] = mxCreateNumericArray (3, dims, mxUINT8_CLASS, mxREAL);
-     unsigned char *out1; /* pointer to output 1 */
-     out1 = (unsigned char *)mxGetPr( pOutput[0] ); /* pointer to output 1 */
+     /* convert segmentation result to matlab matrix*/
+        
+     if ( computeColorOutput )
+     {
+	int width ( imgResultRGB->width() );
+	int height (imgResultRGB->height() );       
+	/* keep in mind that matlab stores images  height × width × color, whereas C does it the other way round*/
+	int dims[] = {height, width,3};
+	pOutput[0] = mxCreateNumericArray (3, dims, mxUINT8_CLASS, mxREAL);
+	unsigned char *out1; /* pointer to output 1 */
+	out1 = (unsigned char *)mxGetPr( pOutput[0] ); /* pointer to output 1 */
 
-          
-     /* start with RED channel*/     
-     /* keep in mind that matlab stores images col by width, whereas C does it the other way round*/
-     for ( uint x = 0; x < width; x++)
-     {
-       uint rowOffset ( x*height );
-       for ( uint y = 0; y < height; y++)
-       {
-	  out1[rowOffset + y ] = (double) (imRef(imgResult, x, y)).r;
-       }
-     }
-     
-     /* GREEN channel*/
-     uint channelOffsetG ( width * height );
-     for ( uint x = 0; x < width; x++)
-     {
-       uint rowOffset ( x*height );
-        for ( uint y = 0; y < height; y++)
+	      
+	/* start with RED channel*/     
+	/* keep in mind that matlab stores images col by width, whereas C does it the other way round*/
+	for ( uint x = 0; x < width; x++)
 	{
-	   out1[channelOffsetG + rowOffset + y ] = (double) (imRef(imgResult, x, y)).g;
+	  uint rowOffset ( x*height );
+	  for ( uint y = 0; y < height; y++)
+	  {
+	      out1[rowOffset + y ] = (double) (imRef(imgResultRGB, x, y)).r;
+	  }
+	}
+	
+	/* GREEN channel*/
+	uint channelOffsetG ( width * height );
+	for ( uint x = 0; x < width; x++)
+	{
+	  uint rowOffset ( x*height );
+	    for ( uint y = 0; y < height; y++)
+	    {
+	      out1[channelOffsetG + rowOffset + y ] = (double) (imRef(imgResultRGB, x, y)).g;
+	    }
+	}
+	
+	/* BLUE channel*/
+	uint channelOffsetB ( 2 * width * height );
+	for ( uint x = 0; x < width; x++)
+	{
+	  uint rowOffset ( x*height );
+	    for ( uint y = 0; y < height; y++)
+	    {
+	      out1[channelOffsetB + rowOffset + y ] = (double) (imRef(imgResultRGB, x, y)).b;
+	    }
+	}
+     }
+     else /* do not compute colored rgb segmentation image, but only an int img*/
+     {
+	int width ( imgResult->width() );
+	int height (imgResult->height() ); 
+        int dims[] = {height, width};
+       	pOutput[0] = mxCreateNumericArray (2, dims, mxINT8_CLASS, mxREAL);
+	unsigned char *out1; /* pointer to output 1 */
+	out1 = (unsigned char *)mxGetPr( pOutput[0] ); /* pointer to output 1 */
+	
+       	/* keep in mind that matlab stores images col by width, whereas C does it the other way round*/
+	for ( uint x = 0; x < width; x++)
+	{
+	  uint rowOffset ( x*height );
+	  for ( uint y = 0; y < height; y++)
+	  {
+	      out1[rowOffset + y ] = (double) (imRef(imgResult, x, y));
+	  }
 	}
      }
      
-     /* BLUE channel*/
-     uint channelOffsetB ( 2 * width * height );
-     for ( uint x = 0; x < width; x++)
+     /* return number of segments*/
+     if ( nOutput >= 2 )
      {
-       uint rowOffset ( x*height );
-        for ( uint y = 0; y < height; y++)
-	{
-	   out1[channelOffsetB + rowOffset + y ] = (double) (imRef(imgResult, x, y)).b;
-	}
+       int dims[] = {1};
+       pOutput[1] = mxCreateNumericArray(1,dims,mxINT8_CLASS,mxREAL);
+       unsigned char *out2; /* pointer to output 2 */
+       out2 = (unsigned char *)mxGetPr( pOutput[1] ); /* pointer to output 2 */      
+       out2[0] = num_ccs;
      }
 
     /* done */
    }
    
    /* don't waste memory*/
-   if ( imgInput != NULL )
+   if ( imgResultRGB != NULL )
+     delete imgInput;
+   if ( imgResult != NULL )
      delete imgInput;
   
   return;
