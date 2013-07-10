@@ -7,7 +7,7 @@
 %        imgInput           --   (string or 3d-matrix over uint8 )
 %        sigma              --   bandwidth of Gaussian kernel to smooth the image (optional, scalar, default: 0.5) 
 %        k                  --   influences the threshold accept a boundary between regions, larger k -> larger regions,(optional, scalar, default: 500)
-%        minSize            --   minimum component size enforced by post-processing stage (optional, scalar, default: 20)
+%        minSize            --   minimum component size enforced by post-processing stage (optional, scalar, default: 50)
 %        computeColorOutput --   compute colored segm output (rgb) or region indicees (gray)? (optional, logical, default: false) 
 %        destination        --   filename where the image shell be stored (optional, string) 
 %        verbose            --   print additional information (optional, logical, default: false) 

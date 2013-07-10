@@ -120,7 +120,7 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
   int minSize;  
   if ( nInput < 4)
   {
-   minSize = 20;
+   minSize = 50;
   }
   else
     minSize = mxGetScalar(  pInput[3] );
