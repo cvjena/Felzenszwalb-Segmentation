@@ -95,11 +95,6 @@ image<int> *segment_image_labelOutput(image<rgb> *im, float sigma, float c, int 
   *num_ccs = u->num_sets();
 
   image<int> *output = new image<int>(width, height);
-
-  // pick random colors for each component
-  rgb *colors = new rgb[width*height];
-  for (int i = 0; i < width*height; i++)
-    colors[i] = random_rgb();
   
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
@@ -107,8 +102,7 @@ image<int> *segment_image_labelOutput(image<rgb> *im, float sigma, float c, int 
       imRef(output, x, y) = comp;
     }
   }  
-
-  delete [] colors;  
+ 
   delete u;
 
   return output;

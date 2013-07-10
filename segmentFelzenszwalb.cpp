@@ -248,7 +248,7 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
 	int width ( imgResult->width() );
 	int height (imgResult->height() ); 
         int dims[] = {height, width};
-       	pOutput[0] = mxCreateNumericArray (2, dims, mxINT8_CLASS, mxREAL);
+       	pOutput[0] = mxCreateNumericArray (2, dims, mxUINT8_CLASS, mxREAL);
 	unsigned char *out1; /* pointer to output 1 */
 	out1 = (unsigned char *)mxGetPr( pOutput[0] ); /* pointer to output 1 */
 	
@@ -258,7 +258,7 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
 	  uint rowOffset ( x*height );
 	  for ( uint y = 0; y < height; y++)
 	  {
-	      out1[rowOffset + y ] = (double) (imRef(imgResult, x, y));
+	      out1[rowOffset + y ] = (uint) (imRef(imgResult, x, y));
 	  }
 	}
      }
