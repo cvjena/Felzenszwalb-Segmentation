@@ -10,10 +10,18 @@
 #include "./segment-image.h"
 #include "./segment-image-labelOutput.h"
 
+#ifndef MIN
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))	/* min and max value
+macros */
+#endif
+#ifndef MAX
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#endif
+
 void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
   int nInput, const mxArray *pInput[]) /* Input variables */
 { 
-    
+   
    /* -----------------------------------------------------------------
    *                         Check the arguments
    * -------------------------------------------------------------- */
@@ -172,13 +180,17 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
    image<int> * imgResult  = NULL;
    
    if ( computeColorOutput )
+   {
      imgResultRGB = segment_image(imgInput, sigma, k, minSize, &num_ccs); 
+   }
    else
+   {
     imgResult = segment_image_labelOutput(imgInput, sigma, k, minSize, &num_ccs); 
+   }
        
    if ( verbose )
      mexPrintf("segmentation done\n");   
-  
+   
    
    /* -----------------------------------------------------------------
    *                      Conversion to Matlab structures
@@ -186,11 +198,19 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
    
    if ( nOutput == 0 )
    {
-     if ( computeColorOutput )
-       savePPM( imgResultRGB, output );
-    else
-      save_image( imgResult, output );
-     mexPrintf("save results\n"); 
+     //was a filename given to store the image in?
+     if (nInput >=  6) 
+     {
+      if ( computeColorOutput )
+	savePPM( imgResultRGB, output );
+      else
+	save_image( imgResult, output );
+      mexPrintf("save results\n"); 
+     }
+     else
+     {
+       mexPrintf("ATTENTION -- Neither output variables nor filename to store the result to given!");
+     }
    }
    else
    {
@@ -205,9 +225,13 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
 	int height (imgResultRGB->height() );       
 	/* keep in mind that matlab stores images  height × width × color, whereas C does it the other way round*/
 	int dims[] = {height, width,3};
-	pOutput[0] = mxCreateNumericArray (3, dims, mxUINT8_CLASS, mxREAL);
-	unsigned char *out1; /* pointer to output 1 */
-	out1 = (unsigned char *)mxGetPr( pOutput[0] ); /* pointer to output 1 */
+	pOutput[0] = mxCreateNumericArray (3, dims, mxINT32_CLASS, mxREAL);
+	//unsigned char *out1; /* pointer to output 1 */
+	//out1 = (unsigned char *)mxGetPr( pOutput[0] ); /* pointer to output 1 */
+	//unsigned char *out1; /* pointer to output 1 */
+	//out1 = (unsigned char *)mxGetPr( pOutput[0] ); /* pointer to output 1 */
+        int *out1; /* pointer to output 1 */
+        out1 = (int *)mxGetData( pOutput[0] ); /* pointer to output 1 *	
 
 	      
 	/* start with RED channel*/     
@@ -217,7 +241,7 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
 	  uint rowOffset ( x*height );
 	  for ( uint y = 0; y < height; y++)
 	  {
-	      out1[rowOffset + y ] = (double) (imRef(imgResultRGB, x, y)).r;
+	      out1[rowOffset + y ] = (int) (imRef(imgResultRGB, x, y)).r;
 	  }
 	}
 	
@@ -228,7 +252,7 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
 	  uint rowOffset ( x*height );
 	    for ( uint y = 0; y < height; y++)
 	    {
-	      out1[channelOffsetG + rowOffset + y ] = (double) (imRef(imgResultRGB, x, y)).g;
+	      out1[channelOffsetG + rowOffset + y ] = (int) (imRef(imgResultRGB, x, y)).g;
 	    }
 	}
 	
@@ -239,7 +263,7 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
 	  uint rowOffset ( x*height );
 	    for ( uint y = 0; y < height; y++)
 	    {
-	      out1[channelOffsetB + rowOffset + y ] = (double) (imRef(imgResultRGB, x, y)).b;
+	      out1[channelOffsetB + rowOffset + y ] = (int) (imRef(imgResultRGB, x, y)).b;
 	    }
 	}
      }
@@ -248,29 +272,68 @@ void mexFunction(int nOutput, mxArray *pOutput[], /* Output variables */
 	int width ( imgResult->width() );
 	int height (imgResult->height() ); 
         int dims[] = {height, width};
-       	pOutput[0] = mxCreateNumericArray (2, dims, mxUINT8_CLASS, mxREAL);
-	unsigned char *out1; /* pointer to output 1 */
-	out1 = (unsigned char *)mxGetPr( pOutput[0] ); /* pointer to output 1 */
 	
-       	/* keep in mind that matlab stores images col by width, whereas C does it the other way round*/
-	for ( uint x = 0; x < width; x++)
+	if (num_ccs < 255)
 	{
-	  uint rowOffset ( x*height );
-	  for ( uint y = 0; y < height; y++)
+	  pOutput[0] = mxCreateNumericArray (2, dims, mxUINT8_CLASS, mxREAL);
+	  unsigned char *out1; /* pointer to output 1 */
+	  out1 = (unsigned char *)mxGetPr( pOutput[0] ); /* pointer to output 1 */
+	  
+	  /* keep in mind that matlab stores images col by width, whereas C does it the other way round*/
+	  for ( uint x = 0; x < width; x++)
 	  {
-	      out1[rowOffset + y ] = (uint) (imRef(imgResult, x, y));
+	    uint rowOffset ( x*height );
+	    for ( uint y = 0; y < height; y++)
+	    {
+		out1[rowOffset + y ] = (unsigned char ) (imRef(imgResult, x, y));
+	    }
+	  }	  
+	}
+	else
+	{
+	  pOutput[0] = mxCreateNumericArray (2, dims, mxINT32_CLASS, mxREAL);
+	  int *out1; /* pointer to output 1 */
+	  out1 = (int *)mxGetData( pOutput[0] ); /* pointer to output 1 *
+	  
+	  /* keep in mind that matlab stores images col by width, whereas C does it the other way round*/
+	  for ( uint x = 0; x < width; x++)
+	  {
+	    uint rowOffset ( x*height );
+	    for ( uint y = 0; y < height; y++)
+	    {
+		out1[rowOffset + y ] = (int) (imRef(imgResult, x, y));
+	    }
 	  }
 	}
-     }
+    }
+     
      
      /* return number of segments*/
      if ( nOutput >= 2 )
      {
        int dims[] = {1};
-       pOutput[1] = mxCreateNumericArray(1,dims,mxINT8_CLASS,mxREAL);
-       unsigned char *out2; /* pointer to output 2 */
-       out2 = (unsigned char *)mxGetPr( pOutput[1] ); /* pointer to output 2 */      
-       out2[0] = num_ccs;
+       if (num_ccs < 255)
+       {
+	pOutput[1] = mxCreateNumericArray(1,dims,mxUINT8_CLASS,mxREAL);
+	unsigned char *out2; /* pointer to output 2 */
+	out2 = (unsigned char *)mxGetPr( pOutput[1] ); /* pointer to output 2 */
+	
+	out2[0] = num_ccs;
+       }
+       else
+       {
+	pOutput[1] = mxCreateNumericArray(1,dims,mxINT32_CLASS,mxREAL);
+	//unsigned char *out2; /* pointer to output 2 */
+	//out2 = (unsigned char *)mxGetPr( pOutput[1] ); /* pointer to output 2 */
+	int *out2; /* pointer to output 2 */
+	out2 = (int *) mxGetData( pOutput[1] ); /* pointer to output 2 */
+	
+	out2[0] = num_ccs;
+
+       }
+       
+       if ( verbose ) 
+	mexPrintf("number of components: %i", num_ccs);
      }
 
     /* done */

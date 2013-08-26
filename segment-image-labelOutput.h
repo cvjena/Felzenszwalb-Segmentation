@@ -2,11 +2,15 @@
 #define SEGMENT_IMAGE_LABELOUTPUT
 
 #include <cstdlib>
+#include <map>
+#include <limits>
 #include "./image.h"
 #include "./misc.h"
 #include "./filter.h"
 #include "./segment-graph.h"
 #include "./segment-image.h"
+
+#include <mex.h>
 
 /*
  * Segment an image
@@ -49,6 +53,10 @@ image<int> *segment_image_labelOutput(image<rgb> *im, float sigma, float c, int 
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       if (x < width-1) {
+// 	if ( num == 0)
+// 	{
+// 	  mexPrintf("r: %f , b: %f g: %f\n", imRef(smooth_r, x, y), imRef(smooth_g, x, y), imRef(smooth_b, x, y));
+// 	}
 	edges[num].a = y * width + x;
 	edges[num].b = y * width + (x+1);
 	edges[num].w = diff(smooth_r, smooth_g, smooth_b, x, y, x+1, y);
@@ -80,11 +88,27 @@ image<int> *segment_image_labelOutput(image<rgb> *im, float sigma, float c, int 
   delete smooth_r;
   delete smooth_g;
   delete smooth_b;
+  
+//      for (int i = 0; i < 5; i++) {
+//       int a = edges[i].a;
+//       int b = edges[i].b;
+//       mexPrintf("components %d: %d <-> %d\n",i, a, b);      
+//     }   
+    // so far, everything is always reproducable
 
   // segment
   universe *u = segment_graph(width*height, num, edges, c);
   
-  // post process small components
+//   // post process small components
+//   mexPrintf("components before PP: %d\n",num);  
+  
+
+//     for (int i = 0; i < 10; i++) {
+//       int a = u->find(edges[i].a);
+//       int b = u->find(edges[i].b);
+//       mexPrintf("components %d: %d <-> %d\n",i, a, b);      
+//     }
+  
   for (int i = 0; i < num; i++) {
     int a = u->find(edges[i].a);
     int b = u->find(edges[i].b);
@@ -92,14 +116,39 @@ image<int> *segment_image_labelOutput(image<rgb> *im, float sigma, float c, int 
       u->join(a, b);
   }
   delete [] edges;
+  
+  //NOTE since u->num_sets() is an int, we are not able to handle more than 
+  // max_int segments ( and therefore also not imgs with more pixels)
   *num_ccs = u->num_sets();
+  
+//   mexPrintf("components after PP: %d\n",*num_ccs); 
 
   image<int> *output = new image<int>(width, height);
+ 
+  //how many different regions do we finally have, and which of them are the corresponding indices?
+  std::map<int,int> regionLabels;
+  int idx ( 0 );
   
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
+  for (int y = 0; y < height; y++)
+  {
+    for (int x = 0; x < width; x++)
+    {
       int comp = u->find(y * width + x);
-      imRef(output, x, y) = comp;
+      if ( regionLabels.find( comp ) == regionLabels.end() )
+      {
+	regionLabels.insert( std::pair<int,int>(comp,idx) );
+	idx++;
+      }
+    }
+  }  
+  
+  // insert region indices into img, map indices from current ones to consecutive ones
+  for (int y = 0; y < height; y++)
+  {
+    for (int x = 0; x < width; x++)
+    {
+      int comp = u->find(y * width + x);
+      imRef(output, x, y) = regionLabels.find(comp)->second;
     }
   }  
  

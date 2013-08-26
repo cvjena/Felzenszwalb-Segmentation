@@ -48,7 +48,18 @@ bool operator<(const edge &a, const edge &b) {
 universe *segment_graph(int num_vertices, int num_edges, edge *edges, 
 			float c) { 
   // sort edges by weight
-  std::sort(edges, edges + num_edges);
+  // note: if weights occure more then once, this might lead to non-deterministic (non-reproducable) behaviour, since
+  // "Equivalent elements are not guaranteed to keep their original relative order"
+//   std::sort(edges, edges + num_edges);
+  
+/*   for (int i = 0; i < 5; i++) {
+      int a = edges[i].a;
+      int b = edges[i].b;
+      mexPrintf("edges before %d: %d <-> %d with weight %f\n",i, a, b, edges[i].w);      
+    } */  
+  
+  // adaptation: use stable_sort instead, which will keep the relative position of equal elements :)
+  std::stable_sort(edges, edges + num_edges);
 
   // make a disjoint-set forest
   universe *u = new universe(num_vertices);
@@ -57,6 +68,20 @@ universe *segment_graph(int num_vertices, int num_edges, edge *edges,
   float *threshold = new float[num_vertices];
   for (int i = 0; i < num_vertices; i++)
     threshold[i] = THRESHOLD(1,c);
+  
+    //that's the same as with find, and also non-reproducable
+//    for (int i = 0; i < 5; i++) {
+//       int a = edges[i].a;
+//       int b = edges[i].b;
+//       mexPrintf("edges after %d: %d <-> %d with weight %f\n",i, a, b, edges[i].w);    
+//     } 
+  
+//      for (int i = 0; i < 5; i++) {
+//       int a = u->find(edges[i].a);
+//       int b = u->find(edges[i].b);
+//       mexPrintf("components %d: %d <-> %d\n",i, a, b);      
+//     } 
+  // this is already non-reproducable
 
   // for each edge, in non-decreasing weight order...
   for (int i = 0; i < num_edges; i++) {
@@ -74,6 +99,7 @@ universe *segment_graph(int num_vertices, int num_edges, edge *edges,
       }
     }
   }
+    
 
   // free up
   delete threshold;
