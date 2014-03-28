@@ -13,24 +13,24 @@
 #include <mex.h>
 
  /**
- * @brief Segment an image, returning an int-image giving the index of the corresponding segment for every pixel
+ * @brief Segment an image, returning an ushort-image giving the index of the corresponding segment for every pixel
  * @author Alexander Freytag
  * @date 27-03-2014 ( dd-mm-yyyy, last updated)
  * 
  * @param[in] im: image to segment
- * @param[in] sigma: to smooth the image
+ * @param[in] d_sigma: to smooth the image
  * @param[in] c: constant for treshold function
- * @param[in] min_size: minimum component size (enforced by post-processing stage)
+ * @param[in] i_minSize: minimum component size (enforced by post-processing stage)
  * @param[in] num_ccs: number of connected components in the segmentation
  * 
- * @param[out] output int-image giving the index of the corresponding segment for every pixel
+ * @param[out] output ushort-image giving the index of the corresponding segment for every pixel
  */
-image<int> *segment_image_labelOutput(   image<rgb> *im,
-                                         float sigma,
-                                         float c,
-                                         int min_size,
-                                         int *num_ccs
-                                     )
+image<unsigned short> *segment_image_labelOutput(   image<rgb> *im,
+                                                    const float d_sigma,
+                                                    const float c,
+                                                    const int i_minSize,
+                                                    int *num_ccs
+                                                )
 {
   int width = im->width();
   int height = im->height();
@@ -39,7 +39,7 @@ image<int> *segment_image_labelOutput(   image<rgb> *im,
   image<float> *g = new image<float>(width, height);
   image<float> *b = new image<float>(width, height);
 
-  // smooth each color channel  
+  // pre-processing: smooth each color channel  
   for (int y = 0; y < height; y++)
   {
     for (int x = 0; x < width; x++)
@@ -49,16 +49,17 @@ image<int> *segment_image_labelOutput(   image<rgb> *im,
       imRef(b, x, y) = imRef(im, x, y).b;
     }
   }
-  image<float> *smooth_r = smooth(r, sigma);
-  image<float> *smooth_g = smooth(g, sigma);
-  image<float> *smooth_b = smooth(b, sigma);
+  image<float> *smooth_r = smooth(r, d_sigma);
+  image<float> *smooth_g = smooth(g, d_sigma);
+  image<float> *smooth_b = smooth(b, d_sigma);
   delete r;
   delete g;
   delete b;
  
   // build graph
   edge *edges = new edge[width*height*4];
-  int num = 0;
+  int num ( 0 );
+  
   for (int y = 0; y < height; y++)
   {
     for (int x = 0; x < width; x++)
@@ -108,7 +109,7 @@ image<int> *segment_image_labelOutput(   image<rgb> *im,
   {
     int a = u->find(edges[i].a);
     int b = u->find(edges[i].b);
-    if ( (a != b) && ((u->size(a) < min_size) || (u->size(b) < min_size))  )
+    if ( (a != b) && ((u->size(a) < i_minSize) || (u->size(b) < i_minSize))  )
       u->join(a, b);
   }
   delete [] edges;
@@ -117,11 +118,11 @@ image<int> *segment_image_labelOutput(   image<rgb> *im,
   // max_int segments ( and therefore also not imgs with more pixels)
   *num_ccs = u->num_sets();
   
-  image<int> *output = new image<int>(width, height);
+  image<unsigned short> *output = new image<unsigned short>(width, height);
  
   //how many different regions do we finally have, and which of them are the corresponding indices?
-  std::map<int,int> regionLabels;
-  int idx ( 0 );
+  std::map<int,unsigned short> regionLabels;
+  unsigned short idx ( 0 );
   
   for (int y = 0; y < height; y++)
   {
@@ -130,7 +131,7 @@ image<int> *segment_image_labelOutput(   image<rgb> *im,
       int comp = u->find(y * width + x);
       if ( regionLabels.find( comp ) == regionLabels.end() )
       {
-        regionLabels.insert( std::pair<int,int>(comp,idx) );
+        regionLabels.insert( std::pair<int,unsigned short>(comp,idx) );
         idx++;
       }
     }

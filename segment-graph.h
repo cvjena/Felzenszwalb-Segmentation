@@ -35,67 +35,59 @@ bool operator<(const edge &a, const edge &b) {
   return a.w < b.w;
 }
 
-/*
- * Segment a graph
- *
- * Returns a disjoint-set forest representing the segmentation.
- *
- * num_vertices: number of vertices in graph.
- * num_edges: number of edges in graph
- * edges: array of edges.
- * c: constant for treshold function.
+ /**
+ * @brief Segment a graph, a disjoint-set forest representing the segmentation
+ * @author Pedro Felzenszwalb, Alexander Freytag
+ * @date 27-03-2014 ( dd-mm-yyyy, last updated)
+ * 
+ * @param[in] i_numVertices: number of vertices in graph
+ * @param[in] i_numEdges: number of edges in graph
+ * @param[in] edges: array of edges
+ * @param[in] c: constant for treshold function
+ * 
+ * @param[out] u universe (disjoint-set forest representing the segmentation)
  */
-universe *segment_graph(int num_vertices, int num_edges, edge *edges, 
-			float c) { 
+universe *segment_graph( const int i_numVertices, 
+                         const int i_numEdges, 
+                         edge *edges, 
+                         const float c
+                       )
+{ 
   // sort edges by weight
   // note: if weights occure more then once, this might lead to non-deterministic (non-reproducable) behaviour, since
   // "Equivalent elements are not guaranteed to keep their original relative order"
-//   std::sort(edges, edges + num_edges);
-  
-/*   for (int i = 0; i < 5; i++) {
-      int a = edges[i].a;
-      int b = edges[i].b;
-      mexPrintf("edges before %d: %d <-> %d with weight %f\n",i, a, b, edges[i].w);      
-    } */  
+  //  std::sort(edges, edges + i_numEdges);
   
   // adaptation: use stable_sort instead, which will keep the relative position of equal elements :)
-  std::stable_sort(edges, edges + num_edges);
+  std::stable_sort(edges, edges + i_numEdges);
 
   // make a disjoint-set forest
-  universe *u = new universe(num_vertices);
+  universe *u = new universe(i_numVertices);
 
   // init thresholds
-  float *threshold = new float[num_vertices];
-  for (int i = 0; i < num_vertices; i++)
+  float *threshold = new float[i_numVertices];
+  for (int i = 0; i < i_numVertices; i++)
+  {
     threshold[i] = THRESHOLD(1,c);
+  }
   
-    //that's the same as with find, and also non-reproducable
-//    for (int i = 0; i < 5; i++) {
-//       int a = edges[i].a;
-//       int b = edges[i].b;
-//       mexPrintf("edges after %d: %d <-> %d with weight %f\n",i, a, b, edges[i].w);    
-//     } 
-  
-//      for (int i = 0; i < 5; i++) {
-//       int a = u->find(edges[i].a);
-//       int b = u->find(edges[i].b);
-//       mexPrintf("components %d: %d <-> %d\n",i, a, b);      
-//     } 
-  // this is already non-reproducable
+
 
   // for each edge, in non-decreasing weight order...
-  for (int i = 0; i < num_edges; i++) {
+  for (int i = 0; i < i_numEdges; i++)
+  {
     edge *pedge = &edges[i];
     
     // components conected by this edge
     int a = u->find(pedge->a);
     int b = u->find(pedge->b);
-    if (a != b) {
-      if ((pedge->w <= threshold[a]) &&
-	  (pedge->w <= threshold[b])) {
-	u->join(a, b);
-	a = u->find(a);
-	threshold[a] = pedge->w + THRESHOLD(u->size(a), c);
+    if (a != b)
+    {
+      if ( (pedge->w <= threshold[a]) && (pedge->w <= threshold[b]) )
+      {
+        u->join(a, b);
+        a = u->find(a);
+        threshold[a] = pedge->w + THRESHOLD(u->size(a), c);
       }
     }
   }
