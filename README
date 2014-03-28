@@ -23,3 +23,6 @@ output: Output image.
 Typical parameters are sigma = 0.5, k = 500, min = 20.
 Larger values for k result in larger components in the result.
 
+
+NOTE ( by Alexander Freytag )
+  - only images with less then std::numeric_limits<int>::max() pixels are supported properly!
