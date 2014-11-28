@@ -12,6 +12,7 @@ compileFelzenszwalbSegmentation.m
 To make Matlab familiar with all relevant paths (there are only 2 currently) go to the root folder and execute
 ```
 initWorkspaceSegmentation.m
+```
 
 
 ### Demo
