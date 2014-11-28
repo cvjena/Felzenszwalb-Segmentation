@@ -8,6 +8,12 @@ simply run
 compileFelzenszwalbSegmentation.m
 ```
 
+### Setup - safely add repo to search path
+To make Matlab familiar with all relevant paths (there are only 2 currently) go to the root folder and execute
+```
+initWorkspaceSegmentation.m
+
+
 ### Demo
 1) Run  
 ```
